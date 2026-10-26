@@ -147,6 +147,71 @@ pub struct PreferencesPayload {
     pub sidebar_group_by_repo: Option<bool>,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveTranslationArgs {
+    pub original_path: String,
+    pub content: String,
+    #[serde(default)]
+    pub overwrite: bool,
+}
+
+#[derive(serde::Serialize)]
+#[serde(tag = "status", rename_all = "lowercase")]
+pub enum SaveTranslationResult {
+    Saved { path: String },
+    Exists { path: String },
+}
+
+fn translation_target(original: &std::path::Path) -> AppResult<PathBuf> {
+    let parent = original
+        .parent()
+        .ok_or_else(|| AppError::Invalid("file has no parent directory".into()))?;
+    let stem = original
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or(AppError::NonUtf8Path)?;
+    let name = match original.extension().and_then(|s| s.to_str()) {
+        Some(ext) => format!("{stem}-CN.{ext}"),
+        None => format!("{stem}-CN"),
+    };
+    Ok(parent.join(name))
+}
+
+/// Save a translated document next to its original as `<name>-CN.<ext>`.
+/// The target is always derived from the original path, never supplied by the
+/// frontend, so this cannot be used as a general-purpose file write.
+#[tauri::command]
+pub fn save_translation(args: SaveTranslationArgs) -> AppResult<SaveTranslationResult> {
+    let original = PathBuf::from(&args.original_path);
+    if !original.is_file() {
+        return Err(AppError::NotFound(args.original_path));
+    }
+    if !crate::folder::is_markdown(&original) {
+        return Err(AppError::Invalid("not a markdown file".into()));
+    }
+
+    let target = translation_target(&original)?;
+    let target_path = target.to_str().ok_or(AppError::NonUtf8Path)?.to_string();
+
+    if target.exists() && !args.overwrite {
+        return Ok(SaveTranslationResult::Exists { path: target_path });
+    }
+
+    let file_name = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or(AppError::NonUtf8Path)?;
+    let tmp = target.with_file_name(format!(".{file_name}.tmp"));
+    std::fs::write(&tmp, &args.content)?;
+    if target.exists() {
+        std::fs::remove_file(&target)?;
+    }
+    std::fs::rename(&tmp, &target)?;
+
+    Ok(SaveTranslationResult::Saved { path: target_path })
+}
+
 #[tauri::command]
 pub fn save_preferences(
     prefs: PreferencesPayload,
@@ -170,5 +235,96 @@ pub fn load_preferences(registry: State<'_, SharedRegistry>) -> PreferencesPaylo
         sidebar_right_width: s.sidebar_right_width,
         copy_as_markdown: s.copy_as_markdown,
         sidebar_group_by_repo: s.sidebar_group_by_repo,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn args(original: &std::path::Path, content: &str, overwrite: bool) -> SaveTranslationArgs {
+        SaveTranslationArgs {
+            original_path: original.to_string_lossy().into_owned(),
+            content: content.into(),
+            overwrite,
+        }
+    }
+
+    #[test]
+    fn translation_target_appends_cn_before_extension() {
+        let dir = tempdir().unwrap();
+        assert_eq!(
+            translation_target(&dir.path().join("README.md")).unwrap(),
+            dir.path().join("README-CN.md")
+        );
+        assert_eq!(
+            translation_target(&dir.path().join("notes")).unwrap(),
+            dir.path().join("notes-CN")
+        );
+    }
+
+    #[test]
+    fn saves_translation_next_to_original() {
+        let dir = tempdir().unwrap();
+        let original = dir.path().join("guide.md");
+        fs::write(&original, "# guide").unwrap();
+
+        match save_translation(args(&original, "中文", false)).unwrap() {
+            SaveTranslationResult::Saved { path } => {
+                assert_eq!(PathBuf::from(&path), dir.path().join("guide-CN.md"));
+                assert_eq!(fs::read_to_string(path).unwrap(), "中文");
+            }
+            _ => panic!("expected saved result"),
+        }
+    }
+
+    #[test]
+    fn reports_existing_target_without_overwriting() {
+        let dir = tempdir().unwrap();
+        let original = dir.path().join("guide.md");
+        fs::write(&original, "# guide").unwrap();
+        fs::write(dir.path().join("guide-CN.md"), "old").unwrap();
+
+        match save_translation(args(&original, "new", false)).unwrap() {
+            SaveTranslationResult::Exists { path } => {
+                assert_eq!(PathBuf::from(path), dir.path().join("guide-CN.md"));
+                assert_eq!(fs::read_to_string(dir.path().join("guide-CN.md")).unwrap(), "old");
+            }
+            _ => panic!("expected exists result"),
+        }
+    }
+
+    #[test]
+    fn overwrites_when_requested() {
+        let dir = tempdir().unwrap();
+        let original = dir.path().join("guide.md");
+        fs::write(&original, "# guide").unwrap();
+        fs::write(dir.path().join("guide-CN.md"), "old").unwrap();
+
+        assert!(matches!(
+            save_translation(args(&original, "new", true)).unwrap(),
+            SaveTranslationResult::Saved { .. }
+        ));
+        assert_eq!(
+            fs::read_to_string(dir.path().join("guide-CN.md")).unwrap(),
+            "new"
+        );
+    }
+
+    #[test]
+    fn rejects_non_markdown_and_missing_files() {
+        let dir = tempdir().unwrap();
+        let txt = dir.path().join("notes.txt");
+        fs::write(&txt, "x").unwrap();
+        assert!(matches!(
+            save_translation(args(&txt, "x", false)),
+            Err(AppError::Invalid(_))
+        ));
+        assert!(matches!(
+            save_translation(args(&dir.path().join("missing.md"), "x", false)),
+            Err(AppError::NotFound(_))
+        ));
     }
 }

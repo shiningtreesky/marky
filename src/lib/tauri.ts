@@ -52,7 +52,16 @@ export const tauri = {
   savePreferences: (prefs: PreferencesPayload) =>
     invoke<void>("save_preferences", { prefs }),
   loadPreferences: () => invoke<PreferencesPayload>("load_preferences"),
+  saveTranslation: (args: {
+    originalPath: string;
+    content: string;
+    overwrite: boolean;
+  }) => invoke<SaveTranslationResult>("save_translation", { args }),
 };
+
+export type SaveTranslationResult =
+  | { status: "saved"; path: string }
+  | { status: "exists"; path: string };
 
 export interface PreferencesPayload {
   zoom: number | null;

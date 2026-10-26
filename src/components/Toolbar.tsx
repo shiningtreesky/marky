@@ -13,29 +13,50 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { Search, Sun, Moon, Monitor, FileText, SplitSquareHorizontal, SplitSquareVertical, X, Settings, Minus, Plus } from "lucide-react";
+import { Search, Sun, Moon, Monitor, FileText, SplitSquareHorizontal, SplitSquareVertical, X, Settings, Minus, Plus, Languages, Loader2, Save, Check } from "lucide-react";
 import { useTheme, type Theme } from "@/lib/theme";
 import { usePreferences } from "@/lib/preferences";
 import { MOD, MOD_SHIFT } from "@/lib/platform";
 import type { SplitDirection } from "@/lib/workspace";
 
 interface Props {
-  filePath?: string;
+  documentLabel?: string;
   onOpenFile: () => void;
   onSplit: (d: SplitDirection) => void;
   onCloseSplit: () => void;
   isSplit: boolean;
   onFind: () => void;
+  onTranslate: () => void;
+  canTranslate: boolean;
+  translating: boolean;
+  isTranslated: boolean;
+  onSaveTranslation: () => void;
+  saving: boolean;
+  savedPath?: string;
 }
 
-export function Toolbar({ filePath, onOpenFile, onSplit, onCloseSplit, isSplit, onFind }: Props) {
+export function Toolbar({
+  documentLabel,
+  onOpenFile,
+  onSplit,
+  onCloseSplit,
+  isSplit,
+  onFind,
+  onTranslate,
+  canTranslate,
+  translating,
+  isTranslated,
+  onSaveTranslation,
+  saving,
+  savedPath,
+}: Props) {
   const { theme, setTheme } = useTheme();
   const { copyAsMarkdown, setCopyAsMarkdown, zoom, zoomIn, zoomOut, zoomReset } = usePreferences();
   const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
 
   return (
     <header className="flex h-9 shrink-0 items-center justify-between border-b bg-card/40 px-3">
-      <div className="truncate text-xs text-muted-foreground">{filePath ?? "No file open"}</div>
+      <div className="truncate text-xs text-muted-foreground">{documentLabel ?? "No file open"}</div>
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -53,6 +74,52 @@ export function Toolbar({ filePath, onOpenFile, onSplit, onCloseSplit, isSplit, 
           </TooltipTrigger>
           <TooltipContent>Open file ({MOD}O)</TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={onTranslate}
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              disabled={!canTranslate || translating}
+              aria-label="Translate to Chinese"
+            >
+              {translating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Languages className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {translating ? "Translating…" : "Translate to Chinese"}
+          </TooltipContent>
+        </Tooltip>
+        {isTranslated && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onSaveTranslation}
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={saving}
+                aria-label="Save translation"
+              >
+                {saving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : savedPath ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs break-all">
+              {savedPath ? `Saved to ${savedPath}` : "Save translation next to original"}
+            </TooltipContent>
+          </Tooltip>
+        )}
         {isSplit ? (
           <Tooltip>
             <TooltipTrigger asChild>

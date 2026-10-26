@@ -15,6 +15,8 @@ export type SplitDirection = "horizontal" | "vertical";
 export interface TabState {
   id: string;
   filePath?: string;
+  /** Set on translated tabs: absolute path of the original file. */
+  translatedFrom?: string;
   title: string;
   source: string;
 }
@@ -36,6 +38,13 @@ export interface WorkspaceState {
 
 export type Action =
   | { type: "OPEN_FILE"; path: string; title: string; source: string; paneId?: string }
+  | {
+      type: "OPEN_TRANSLATED";
+      originPath: string;
+      title: string;
+      source: string;
+      paneId?: string;
+    }
   | { type: "OPEN_WELCOME"; source: string }
   | { type: "UPDATE_TAB_SOURCE"; tabId: string; source: string }
   | { type: "CLOSE_TAB"; tabId: string; paneId: string }
@@ -112,6 +121,45 @@ export function reduce(state: WorkspaceState, action: Action): WorkspaceState {
       const newTab: TabState = {
         id: tabId,
         filePath: action.path,
+        title: action.title,
+        source: action.source,
+      };
+      return {
+        ...state,
+        tabs: { ...state.tabs, [tabId]: newTab },
+        panes: state.panes.map((p) =>
+          p.id === paneId ? { ...p, tabIds: [...p.tabIds, tabId], activeTabId: tabId } : p
+        ),
+        activePaneId: paneId,
+        nextTabId: state.nextTabId + 1,
+      };
+    }
+
+    case "OPEN_TRANSLATED": {
+      const existing = Object.values(state.tabs).find(
+        (tab) => tab.translatedFrom === action.originPath,
+      );
+      if (existing) {
+        const existingPane = state.panes.find((p) => p.tabIds.includes(existing.id));
+        const paneId = existingPane?.id ?? action.paneId ?? state.activePaneId;
+        return {
+          ...state,
+          tabs: {
+            ...state.tabs,
+            [existing.id]: { ...existing, title: action.title, source: action.source },
+          },
+          panes: state.panes.map((p) =>
+            p.id === paneId ? { ...p, activeTabId: existing.id } : p,
+          ),
+          activePaneId: paneId,
+        };
+      }
+
+      const tabId = `t${state.nextTabId}`;
+      const paneId = action.paneId ?? state.activePaneId;
+      const newTab: TabState = {
+        id: tabId,
+        translatedFrom: action.originPath,
         title: action.title,
         source: action.source,
       };

@@ -83,6 +83,46 @@ describe("workspace reducer", () => {
     expect(s.split).toBeNull();
   });
 
+  it("OPEN_TRANSLATED adds a translated tab without a file path", () => {
+    let s = createInitialState("w");
+    s = open(s, "/a.md");
+    s = reduce(s, {
+      type: "OPEN_TRANSLATED",
+      originPath: "/a.md",
+      title: "a.md（中文）",
+      source: "中文",
+    });
+    const tab = getActiveTab(s)!;
+    expect(tab.title).toBe("a.md（中文）");
+    expect(tab.translatedFrom).toBe("/a.md");
+    expect(tab.filePath).toBeUndefined();
+    expect(tab.source).toBe("中文");
+  });
+
+  it("OPEN_TRANSLATED reuses an existing translation for the same origin", () => {
+    let s = createInitialState("w");
+    s = open(s, "/a.md");
+    s = reduce(s, {
+      type: "OPEN_TRANSLATED",
+      originPath: "/a.md",
+      title: "a.md（中文）",
+      source: "第一版",
+    });
+    const tabId = getActiveTab(s)!.id;
+    const tabCount = Object.keys(s.tabs).length;
+
+    s = reduce(s, {
+      type: "OPEN_TRANSLATED",
+      originPath: "/a.md",
+      title: "a.md（中文）",
+      source: "第二版",
+    });
+
+    expect(Object.keys(s.tabs)).toHaveLength(tabCount);
+    expect(s.tabs[tabId].source).toBe("第二版");
+    expect(getActiveTab(s)?.id).toBe(tabId);
+  });
+
   it("UPDATE_TAB_SOURCE mutates only the targeted tab", () => {
     let s = createInitialState("w");
     s = open(s, "/a.md", "old");

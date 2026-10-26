@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useState, useCallback, useRef } from "react";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { ask, message, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { ThemeProvider } from "@/lib/theme";
 import { PreferencesProvider, usePreferences } from "@/lib/preferences";
@@ -19,6 +19,7 @@ import {
   type SplitDirection,
 } from "@/lib/workspace";
 import { MOD, MOD_SHIFT } from "@/lib/platform";
+import { translateMarkdownToChinese } from "@/lib/translate";
 import { basename, cn } from "@/lib/utils";
 
 const WELCOME = `# Welcome to Marky
@@ -43,6 +44,9 @@ function AppShell() {
   const [state, dispatch] = useReducer(reduce, undefined, () => createInitialState(WELCOME));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchPaneId, setSearchPaneId] = useState<string | null>(null);
+  const [translatingTabId, setTranslatingTabId] = useState<string | null>(null);
+  const [savingTabId, setSavingTabId] = useState<string | null>(null);
+  const [savedPaths, setSavedPaths] = useState<Record<string, string>>({});
   const [folders, setFolders] = useState<AnnotatedFolder[]>([]);
   const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -199,6 +203,70 @@ function AppShell() {
     if (typeof picked === "string") openFile(picked);
   };
 
+  const handleTranslate = useCallback(async () => {
+    if (!activeTab?.filePath || activeTab.translatedFrom || translatingTabId) return;
+    setTranslatingTabId(activeTab.id);
+    try {
+      const translated = await translateMarkdownToChinese(activeTab.source);
+      setSavedPaths({});
+      dispatch({
+        type: "OPEN_TRANSLATED",
+        originPath: activeTab.filePath,
+        title: `${basename(activeTab.filePath)}（中文）`,
+        source: translated,
+        paneId: state.activePaneId,
+      });
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      await message(`Translation failed: ${detail}`, {
+        title: "Translation failed",
+        kind: "error",
+      });
+    } finally {
+      setTranslatingTabId(null);
+    }
+  }, [activeTab, state.activePaneId, translatingTabId]);
+
+  const handleSaveTranslation = useCallback(async () => {
+    if (!activeTab?.translatedFrom) return;
+    setSavingTabId(activeTab.id);
+    try {
+      let result = await tauri.saveTranslation({
+        originalPath: activeTab.translatedFrom,
+        content: activeTab.source,
+        overwrite: false,
+      });
+
+      if (result.status === "exists") {
+        const confirmed = await ask(
+          `${basename(result.path)} already exists. Overwrite it?`,
+          {
+            title: "Overwrite translation",
+            kind: "warning",
+            okLabel: "Overwrite",
+            cancelLabel: "Cancel",
+          },
+        );
+        if (!confirmed) return;
+        result = await tauri.saveTranslation({
+          originalPath: activeTab.translatedFrom,
+          content: activeTab.source,
+          overwrite: true,
+        });
+      }
+
+      if (result.status === "saved") {
+        setSavedPaths((prev) => ({ ...prev, [activeTab.id]: result.path }));
+        await message(result.path, { title: "Translation saved", kind: "info" });
+      }
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      await message(`Save failed: ${detail}`, { title: "Save failed", kind: "error" });
+    } finally {
+      setSavingTabId(null);
+    }
+  }, [activeTab]);
+
   const handleSplit = (d: SplitDirection) => dispatch({ type: "SPLIT", direction: d });
   const handleCloseSplit = () => dispatch({ type: "CLOSE_SPLIT" });
   const handleJumpToFolder = (folderId: string) => {
@@ -241,12 +309,24 @@ function AppShell() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Toolbar
-          filePath={activeTab?.filePath}
+          documentLabel={
+            activeTab?.filePath ??
+            (activeTab?.translatedFrom ? activeTab.title : undefined)
+          }
           onOpenFile={handlePickFile}
           onSplit={handleSplit}
           onCloseSplit={handleCloseSplit}
           isSplit={isSplit}
           onFind={() => setSearchPaneId(state.activePaneId)}
+          onTranslate={handleTranslate}
+          canTranslate={
+            !!activeTab?.filePath && !activeTab.translatedFrom && translatingTabId === null
+          }
+          translating={translatingTabId === activeTab?.id}
+          isTranslated={!!activeTab?.translatedFrom}
+          onSaveTranslation={handleSaveTranslation}
+          saving={savingTabId === activeTab?.id}
+          savedPath={activeTab ? savedPaths[activeTab.id] : undefined}
         />
         <div className="flex min-h-0 flex-1">
           <main className="min-w-0 flex-1">
