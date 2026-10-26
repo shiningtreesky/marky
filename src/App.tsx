@@ -20,6 +20,7 @@ import {
 } from "@/lib/workspace";
 import { MOD, MOD_SHIFT } from "@/lib/platform";
 import { translateMarkdownToChinese } from "@/lib/translate";
+import { paneIdFromPoint } from "@/lib/dropTarget";
 import { basename, cn } from "@/lib/utils";
 
 const WELCOME = `# Welcome to Marky
@@ -29,7 +30,7 @@ A fast markdown viewer with folder support.
 - Press **${MOD}K** to open the command palette and search files.
 - Press **${MOD}O** to open a file. **${MOD}F** searches inside the open document.
 - Add a folder from the sidebar; it stays available across sessions.
-- **${MOD}\\\\** splits the active pane vertically. **${MOD_SHIFT}\\\\** splits horizontally.
+- **${MOD}\\** splits left / right. **${MOD_SHIFT}\\** splits top / bottom.
 - Drop a file onto the window to open it as a new tab.
 
 Launch from the terminal:
@@ -65,11 +66,11 @@ function AppShell() {
     setSidebarRefresh((n) => n + 1);
   }, []);
 
-  const openFile = useCallback(async (path: string) => {
+  const openFile = useCallback(async (path: string, paneId?: string) => {
     try {
       const text = await tauri.readFile(path);
       const title = basename(path);
-      dispatch({ type: "OPEN_FILE", path, title, source: text });
+      dispatch({ type: "OPEN_FILE", path, title, source: text, paneId });
     } catch (err) {
       console.error("failed to read file", err);
     }
@@ -161,7 +162,7 @@ function AppShell() {
         setSearchPaneId(state.activePaneId);
       } else if (meta && e.key === "\\") {
         e.preventDefault();
-        dispatch({ type: "SPLIT", direction: e.shiftKey ? "horizontal" : "vertical" });
+        dispatch({ type: "SPLIT", direction: e.shiftKey ? "top-bottom" : "left-right" });
       } else if (meta && k === "w") {
         e.preventDefault();
         const tabId = activePane.activeTabId;
@@ -181,14 +182,19 @@ function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [state.activePaneId, activePane.activeTabId, activePane.id, zoomIn, zoomOut, zoomReset]);
 
-  // File drop opens as new tab.
+  // Dropped files open in the pane under the cursor, or the focused pane.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     (async () => {
       const off = await getCurrentWebview().onDragDropEvent((e) => {
-        if (e.payload.type === "drop" && e.payload.paths.length > 0) {
-          openFile(e.payload.paths[0]);
-        }
+        if (e.payload.type !== "drop" || e.payload.paths.length === 0) return;
+        const paths = e.payload.paths;
+        const { x, y } = e.payload.position;
+        const dpr = window.devicePixelRatio || 1;
+        const paneId = paneIdFromPoint(x / dpr, y / dpr) ?? undefined;
+        void (async () => {
+          for (const path of paths) await openFile(path, paneId);
+        })();
       });
       unlisten = off;
     })();
@@ -333,17 +339,23 @@ function AppShell() {
             <div
               className={cn(
                 "flex h-full",
-                state.split === "horizontal" ? "flex-col" : "flex-row"
+                state.split === "top-bottom" ? "flex-col" : "flex-row"
               )}
             >
               {state.panes.map((p, i) => (
-                <div key={p.id} className="flex min-h-0 min-w-0 flex-1">
+                <div
+                  key={p.id}
+                  className={cn(
+                    "flex min-h-0 min-w-0 flex-1",
+                    state.split === "top-bottom" ? "flex-col" : "flex-row"
+                  )}
+                >
                   {renderPane(p.id)}
                   {i < state.panes.length - 1 && (
                     <div
                       className={cn(
                         "shrink-0 bg-border",
-                        state.split === "horizontal" ? "h-px w-full" : "h-full w-px"
+                        state.split === "top-bottom" ? "h-px w-full" : "h-full w-px"
                       )}
                     />
                   )}

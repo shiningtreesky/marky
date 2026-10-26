@@ -123,7 +123,13 @@ export function Toolbar({
         {isSplit ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={onCloseSplit} variant="ghost" size="icon" className="h-7 w-7">
+              <Button
+                onClick={onCloseSplit}
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="Close split"
+              >
                 <X className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
@@ -133,19 +139,31 @@ export function Toolbar({
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={() => onSplit("vertical")} variant="ghost" size="icon" className="h-7 w-7">
-                  <SplitSquareVertical className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Split vertically ({MOD}\)</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={() => onSplit("horizontal")} variant="ghost" size="icon" className="h-7 w-7">
+                <Button
+                  onClick={() => onSplit("left-right")}
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  aria-label="Split left and right"
+                >
                   <SplitSquareHorizontal className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Split horizontally ({MOD_SHIFT}\)</TooltipContent>
+              <TooltipContent>Split left / right ({MOD}\)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => onSplit("top-bottom")}
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  aria-label="Split top and bottom"
+                >
+                  <SplitSquareVertical className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Split top / bottom ({MOD_SHIFT}\)</TooltipContent>
             </Tooltip>
           </>
         )}

@@ -10,7 +10,8 @@
  *     `closeEmptyPane()` is invoked at the end of every action.
  */
 
-export type SplitDirection = "horizontal" | "vertical";
+/** `"left-right"` = panes side by side, `"top-bottom"` = panes stacked. */
+export type SplitDirection = "left-right" | "top-bottom";
 
 export interface TabState {
   id: string;
@@ -241,12 +242,29 @@ export function reduce(state: WorkspaceState, action: Action): WorkspaceState {
         return { ...state, split: action.direction };
       }
       const newPaneId = `p${state.nextPaneId}`;
-      // Start the new pane empty. Cloning the active tab caused two Viewers
-      // to highlight the same source concurrently and step on each other's
-      // pre.outerHTML swaps — that locked the renderer up.
+      const sourcePane =
+        state.panes.find((p) => p.id === state.activePaneId) ?? state.panes[0];
+      const sourceTab = sourcePane?.activeTabId
+        ? state.tabs[sourcePane.activeTabId]
+        : undefined;
+
+      // Clone the focused document so both panes show it. Highlighting is
+      // serialized in Viewer, so two panes can render the same source safely.
+      let tabs = state.tabs;
+      let nextTabId = state.nextTabId;
+      const tabIds: string[] = [];
+      if (sourceTab) {
+        const cloneId = `t${nextTabId}`;
+        nextTabId += 1;
+        tabs = { ...tabs, [cloneId]: { ...sourceTab, id: cloneId } };
+        tabIds.push(cloneId);
+      }
+
       return {
         ...state,
-        panes: [...state.panes, { id: newPaneId, tabIds: [], activeTabId: null }],
+        tabs,
+        nextTabId,
+        panes: [...state.panes, { id: newPaneId, tabIds, activeTabId: tabIds[0] ?? null }],
         activePaneId: newPaneId,
         split: action.direction,
         nextPaneId: state.nextPaneId + 1,

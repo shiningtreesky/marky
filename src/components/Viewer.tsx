@@ -16,6 +16,20 @@ interface Props {
 
 const scrollMemory = new Map<string, number>();
 
+// Two panes can render the same source at once, and both rewrite the same
+// kinds of nodes (Shiki output, mermaid SVG). Serialize the pass so they never
+// swap each other's DOM mid-render.
+let renderPass: Promise<unknown> = Promise.resolve();
+
+function queueRenderPass<T>(task: () => Promise<T>): Promise<T> {
+  const result = renderPass.then(task, task);
+  renderPass = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
 export function Viewer({ source, filePath, articleRef, onRendered }: Props) {
   const internalRef = React.useRef<HTMLElement>(null);
   const ref = (articleRef ?? internalRef) as React.RefObject<HTMLElement | null>;
@@ -41,7 +55,7 @@ export function Viewer({ source, filePath, articleRef, onRendered }: Props) {
     if (!root) return;
     let cancelled = false;
 
-    (async () => {
+    void queueRenderPass(async () => {
       const codeBlocks = root.querySelectorAll<HTMLElement>("pre > code[class*='language-']");
       for (const code of Array.from(codeBlocks)) {
         const cls = code.className;
@@ -70,7 +84,7 @@ export function Viewer({ source, filePath, articleRef, onRendered }: Props) {
       attachCopyButtons(root as HTMLElement);
       await renderMermaidBlocks(root as HTMLElement, resolved);
       if (!cancelled) onRenderedRef.current?.();
-    })();
+    });
 
     return () => {
       cancelled = true;

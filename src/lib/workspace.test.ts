@@ -39,22 +39,39 @@ describe("workspace reducer", () => {
     expect(getActiveTab(s)?.filePath).toBe("/b.md");
   });
 
-  it("SPLIT creates an empty new pane and switches focus to it", () => {
+  it("SPLIT clones the focused document into the new pane", () => {
     let s = createInitialState("w");
-    s = open(s, "/a.md");
-    s = reduce(s, { type: "SPLIT", direction: "vertical" });
+    s = open(s, "/a.md", "content a");
+    s = reduce(s, { type: "SPLIT", direction: "left-right" });
     expect(s.panes).toHaveLength(2);
-    expect(s.split).toBe("vertical");
+    expect(s.split).toBe("left-right");
+
     const newPane = s.panes[1];
+    const sourceTabId = s.panes[0].activeTabId!;
+    const cloneTabId = newPane.activeTabId!;
     expect(s.activePaneId).toBe(newPane.id);
-    expect(newPane.tabIds).toEqual([]);
-    expect(newPane.activeTabId).toBeNull();
+    expect(cloneTabId).not.toBe(sourceTabId);
+    expect(s.tabs[cloneTabId].filePath).toBe("/a.md");
+    expect(s.tabs[cloneTabId].source).toBe("content a");
+  });
+
+  it("SPLIT leaves the new pane empty when the focused pane has no tab", () => {
+    let s = createInitialState("w");
+    s = reduce(s, {
+      type: "CLOSE_TAB",
+      tabId: getActiveTab(s)!.id,
+      paneId: s.activePaneId,
+    });
+    s = reduce(s, { type: "SPLIT", direction: "top-bottom" });
+    expect(s.panes).toHaveLength(2);
+    expect(s.panes[1].tabIds).toEqual([]);
+    expect(s.panes[1].activeTabId).toBeNull();
   });
 
   it("OPEN_FILE goes into the active (new) pane after split", () => {
     let s = createInitialState("w");
     s = open(s, "/a.md");
-    s = reduce(s, { type: "SPLIT", direction: "vertical" });
+    s = reduce(s, { type: "SPLIT", direction: "left-right" });
     s = open(s, "/c.md");
     const right = s.panes[1];
     expect(right.tabIds.map((id) => s.tabs[id].filePath)).toContain("/c.md");
@@ -63,7 +80,7 @@ describe("workspace reducer", () => {
   it("CLOSE_SPLIT collapses to the focused pane", () => {
     let s = createInitialState("w");
     s = open(s, "/a.md");
-    s = reduce(s, { type: "SPLIT", direction: "horizontal" });
+    s = reduce(s, { type: "SPLIT", direction: "top-bottom" });
     s = open(s, "/c.md");
     s = reduce(s, { type: "CLOSE_SPLIT" });
     expect(s.panes).toHaveLength(1);
@@ -74,8 +91,7 @@ describe("workspace reducer", () => {
   it("closing the last tab in the second pane collapses split automatically", () => {
     let s = createInitialState("w");
     s = open(s, "/a.md");
-    s = reduce(s, { type: "SPLIT", direction: "vertical" });
-    s = open(s, "/c.md"); // populates the empty new pane
+    s = reduce(s, { type: "SPLIT", direction: "left-right" });
     const newPane = s.panes[1];
     const onlyTab = newPane.activeTabId!;
     s = reduce(s, { type: "CLOSE_TAB", tabId: onlyTab, paneId: newPane.id });
@@ -134,7 +150,7 @@ describe("workspace reducer", () => {
   it("FOCUS_PANE switches active pane only when the id exists", () => {
     let s = createInitialState("w");
     s = open(s, "/a.md");
-    s = reduce(s, { type: "SPLIT", direction: "vertical" });
+    s = reduce(s, { type: "SPLIT", direction: "left-right" });
     const left = s.panes[0].id;
     s = reduce(s, { type: "FOCUS_PANE", paneId: left });
     expect(s.activePaneId).toBe(left);

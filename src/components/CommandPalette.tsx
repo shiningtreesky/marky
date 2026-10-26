@@ -122,13 +122,13 @@ export function CommandPalette({
                 <FolderPlus className="mr-2 h-4 w-4" />
                 Add Folder…
               </CommandItem>
-              <CommandItem onSelect={() => handleSplit("vertical")}>
-                <SplitSquareVertical className="mr-2 h-4 w-4" />
-                Split Pane Vertically
-              </CommandItem>
-              <CommandItem onSelect={() => handleSplit("horizontal")}>
+              <CommandItem onSelect={() => handleSplit("left-right")}>
                 <SplitSquareHorizontal className="mr-2 h-4 w-4" />
-                Split Pane Horizontally
+                Split Left / Right
+              </CommandItem>
+              <CommandItem onSelect={() => handleSplit("top-bottom")}>
+                <SplitSquareVertical className="mr-2 h-4 w-4" />
+                Split Top / Bottom
               </CommandItem>
               {isSplit && (
                 <CommandItem onSelect={handleCloseSplit}>
