@@ -16,6 +16,7 @@ import {
 import { Search, Sun, Moon, Monitor, FileText, SplitSquareHorizontal, SplitSquareVertical, X, Settings, Minus, Plus } from "lucide-react";
 import { useTheme, type Theme } from "@/lib/theme";
 import { usePreferences } from "@/lib/preferences";
+import { MOD, MOD_SHIFT } from "@/lib/platform";
 import type { SplitDirection } from "@/lib/workspace";
 
 interface Props {
@@ -42,7 +43,7 @@ export function Toolbar({ filePath, onOpenFile, onSplit, onCloseSplit, isSplit, 
               <Search className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Find in document (⌘F)</TooltipContent>
+          <TooltipContent>Find in document ({MOD}F)</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -50,7 +51,7 @@ export function Toolbar({ filePath, onOpenFile, onSplit, onCloseSplit, isSplit, 
               <FileText className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Open file (⌘O)</TooltipContent>
+          <TooltipContent>Open file ({MOD}O)</TooltipContent>
         </Tooltip>
         {isSplit ? (
           <Tooltip>
@@ -69,7 +70,7 @@ export function Toolbar({ filePath, onOpenFile, onSplit, onCloseSplit, isSplit, 
                   <SplitSquareVertical className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Split vertically (⌘\)</TooltipContent>
+              <TooltipContent>Split vertically ({MOD}\)</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -77,7 +78,7 @@ export function Toolbar({ filePath, onOpenFile, onSplit, onCloseSplit, isSplit, 
                   <SplitSquareHorizontal className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Split horizontally (⌘⇧\)</TooltipContent>
+              <TooltipContent>Split horizontally ({MOD_SHIFT}\)</TooltipContent>
             </Tooltip>
           </>
         )}

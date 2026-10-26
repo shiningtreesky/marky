@@ -132,14 +132,14 @@ pub fn run() {
 
     // Handle macOS file-open events (Finder "Open With", Dock drag-drop,
     // `open /path/to/file.md` when Marky is the default handler).
-    app.run(|app_handle, event| {
+    app.run(|_app_handle, _event| {
         #[cfg(target_os = "macos")]
-        if let tauri::RunEvent::Opened { urls } = event {
+        if let tauri::RunEvent::Opened { urls } = _event {
             for url in urls {
                 if let Ok(path) = url.to_file_path() {
                     let target = cli::classify(&path);
                     if target != cli::InitialTarget::None {
-                        handle_target(app_handle, target);
+                        handle_target(_app_handle, target);
                         break;
                     }
                 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cn } from "./utils";
+import { basename, cn } from "./utils";
 
 describe("cn", () => {
   it("merges classes", () => {
@@ -16,5 +16,20 @@ describe("cn", () => {
 
   it("supports conditional via clsx", () => {
     expect(cn({ a: true, b: false })).toBe("a");
+  });
+});
+
+describe("basename", () => {
+  it("handles posix paths", () => {
+    expect(basename("/docs/guide/intro.md")).toBe("intro.md");
+  });
+
+  it("handles windows paths", () => {
+    expect(basename("C:\\docs\\guide\\intro.md")).toBe("intro.md");
+  });
+
+  it("handles mixed separators and bare names", () => {
+    expect(basename("C:\\docs/guide\\intro.md")).toBe("intro.md");
+    expect(basename("README.md")).toBe("README.md");
   });
 });

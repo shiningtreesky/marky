@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { tauri, onFolderChanged, type AnnotatedFolder, type TreeNode } from "@/lib/tauri";
 import { usePreferences } from "@/lib/preferences";
+import { MOD } from "@/lib/platform";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -159,7 +160,7 @@ export function FolderSidebar({ activePath, onOpenFile, onOpenPalette, refreshNo
           <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="flex-1 truncate text-left">Search files…</span>
           <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border bg-muted px-1 font-mono text-[10px] font-medium text-muted-foreground">
-            <span className="text-xs">⌘</span>K
+            <span className="text-xs">{MOD}</span>K
           </kbd>
         </button>
       </div>

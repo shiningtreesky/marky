@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { basename, cn } from "@/lib/utils";
 import type { PaneState, TabState } from "@/lib/workspace";
 
 interface Props {
@@ -15,8 +15,7 @@ function tabLabel(tab: TabState | undefined): string {
   if (!tab) return "";
   if (tab.title === "Welcome") return "Welcome";
   if (tab.filePath) {
-    const parts = tab.filePath.split("/");
-    return parts[parts.length - 1];
+    return basename(tab.filePath);
   }
   return tab.title;
 }

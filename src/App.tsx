@@ -18,16 +18,17 @@ import {
   getActiveTab,
   type SplitDirection,
 } from "@/lib/workspace";
-import { cn } from "@/lib/utils";
+import { MOD, MOD_SHIFT } from "@/lib/platform";
+import { basename, cn } from "@/lib/utils";
 
 const WELCOME = `# Welcome to Marky
 
 A fast markdown viewer with folder support.
 
-- Press **⌘K** to open the command palette and search files.
-- Press **⌘O** to open a file. **⌘F** searches inside the open document.
+- Press **${MOD}K** to open the command palette and search files.
+- Press **${MOD}O** to open a file. **${MOD}F** searches inside the open document.
 - Add a folder from the sidebar; it stays available across sessions.
-- **⌘\\** splits the active pane vertically. **⌘⇧\\** splits horizontally.
+- **${MOD}\\\\** splits the active pane vertically. **${MOD_SHIFT}\\\\** splits horizontally.
 - Drop a file onto the window to open it as a new tab.
 
 Launch from the terminal:
@@ -63,7 +64,7 @@ function AppShell() {
   const openFile = useCallback(async (path: string) => {
     try {
       const text = await tauri.readFile(path);
-      const title = path.split("/").pop() ?? path;
+      const title = basename(path);
       dispatch({ type: "OPEN_FILE", path, title, source: text });
     } catch (err) {
       console.error("failed to read file", err);

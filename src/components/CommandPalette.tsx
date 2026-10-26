@@ -26,6 +26,7 @@ import {
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useTheme, type Theme } from "@/lib/theme";
 import { usePreferences } from "@/lib/preferences";
+import { basename } from "@/lib/utils";
 import type { SplitDirection } from "@/lib/workspace";
 
 interface Props {
@@ -196,7 +197,7 @@ export function CommandPalette({
               >
                 <FileText className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="flex-1 truncate">
-                  <div className="truncate font-medium">{r.relative_path.split("/").pop()}</div>
+                  <div className="truncate font-medium">{basename(r.relative_path)}</div>
                   <div className="truncate text-xs text-muted-foreground">{r.relative_path}</div>
                 </div>
                 <Badge variant="secondary" className="ml-2 shrink-0">{r.folder_name}</Badge>
