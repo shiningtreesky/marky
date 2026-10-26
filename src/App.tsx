@@ -55,6 +55,7 @@ function AppShell() {
     zoomIn, zoomOut, zoomReset,
     sidebarLeftWidth, sidebarRightWidth,
     setSidebarWidth, resetSidebarWidth,
+    sidebarLeftVisible, setSidebarLeftVisible,
   } = usePreferences();
 
   const activeTab = getActiveTab(state);
@@ -300,19 +301,23 @@ function AppShell() {
 
   return (
     <div className="flex h-full">
-      <div ref={sidebarRef} className="flex h-full min-h-0 shrink-0" style={{ width: sidebarLeftWidth }}>
-        <FolderSidebar
-          activePath={activeTab?.filePath}
-          onOpenFile={openFile}
-          onOpenPalette={() => setPaletteOpen(true)}
-          refreshNonce={sidebarRefresh}
-        />
-      </div>
-      <ResizeHandle
-        side="left"
-        onResize={(w) => setSidebarWidth("left", w)}
-        onReset={() => resetSidebarWidth("left")}
-      />
+      {sidebarLeftVisible && (
+        <>
+          <div ref={sidebarRef} className="flex h-full min-h-0 shrink-0" style={{ width: sidebarLeftWidth }}>
+            <FolderSidebar
+              activePath={activeTab?.filePath}
+              onOpenFile={openFile}
+              onOpenPalette={() => setPaletteOpen(true)}
+              refreshNonce={sidebarRefresh}
+            />
+          </div>
+          <ResizeHandle
+            side="left"
+            onResize={(w) => setSidebarWidth("left", w)}
+            onReset={() => resetSidebarWidth("left")}
+          />
+        </>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
         <Toolbar
           documentLabel={
@@ -333,6 +338,8 @@ function AppShell() {
           onSaveTranslation={handleSaveTranslation}
           saving={savingTabId === activeTab?.id}
           savedPath={activeTab ? savedPaths[activeTab.id] : undefined}
+          sidebarVisible={sidebarLeftVisible}
+          onToggleSidebar={() => setSidebarLeftVisible(!sidebarLeftVisible)}
         />
         <div className="flex min-h-0 flex-1">
           <main className="min-w-0 flex-1">

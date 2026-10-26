@@ -33,6 +33,9 @@ pub struct Settings {
     pub copy_as_markdown: Option<bool>,
     #[serde(default)]
     pub sidebar_group_by_repo: Option<bool>,
+    /// Whether the folders sidebar is shown. `None` means "never saved yet".
+    #[serde(default)]
+    pub sidebar_left_visible: Option<bool>,
 }
 
 const RECENT_LIMIT: usize = 20;

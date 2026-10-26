@@ -69,6 +69,7 @@ export interface PreferencesPayload {
   sidebar_right_width: number | null;
   copy_as_markdown: boolean | null;
   sidebar_group_by_repo: boolean | null;
+  sidebar_left_visible: boolean | null;
 }
 
 export function onFolderChanged(cb: (folderId: string) => void): Promise<UnlistenFn> {

@@ -145,6 +145,7 @@ pub struct PreferencesPayload {
     pub sidebar_right_width: Option<u32>,
     pub copy_as_markdown: Option<bool>,
     pub sidebar_group_by_repo: Option<bool>,
+    pub sidebar_left_visible: Option<bool>,
 }
 
 #[derive(serde::Deserialize)]
@@ -223,6 +224,7 @@ pub fn save_preferences(
         s.sidebar_right_width = prefs.sidebar_right_width;
         s.copy_as_markdown = prefs.copy_as_markdown;
         s.sidebar_group_by_repo = prefs.sidebar_group_by_repo;
+        s.sidebar_left_visible = prefs.sidebar_left_visible;
     })
 }
 
@@ -235,6 +237,7 @@ pub fn load_preferences(registry: State<'_, SharedRegistry>) -> PreferencesPaylo
         sidebar_right_width: s.sidebar_right_width,
         copy_as_markdown: s.copy_as_markdown,
         sidebar_group_by_repo: s.sidebar_group_by_repo,
+        sidebar_left_visible: s.sidebar_left_visible,
     }
 }
 

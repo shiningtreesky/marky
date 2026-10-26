@@ -13,7 +13,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { Search, Sun, Moon, Monitor, FileText, SplitSquareHorizontal, SplitSquareVertical, X, Settings, Minus, Plus, Languages, Loader2, Save, Check } from "lucide-react";
+import { Search, Sun, Moon, Monitor, FileText, SplitSquareHorizontal, SplitSquareVertical, X, Settings, Minus, Plus, Languages, Loader2, Save, Check, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTheme, type Theme } from "@/lib/theme";
 import { usePreferences } from "@/lib/preferences";
 import { MOD, MOD_SHIFT } from "@/lib/platform";
@@ -33,6 +33,8 @@ interface Props {
   onSaveTranslation: () => void;
   saving: boolean;
   savedPath?: string;
+  sidebarVisible: boolean;
+  onToggleSidebar: () => void;
 }
 
 export function Toolbar({
@@ -49,14 +51,36 @@ export function Toolbar({
   onSaveTranslation,
   saving,
   savedPath,
+  sidebarVisible,
+  onToggleSidebar,
 }: Props) {
   const { theme, setTheme } = useTheme();
   const { copyAsMarkdown, setCopyAsMarkdown, zoom, zoomIn, zoomOut, zoomReset } = usePreferences();
   const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
 
   return (
-    <header className="flex h-9 shrink-0 items-center justify-between border-b bg-card/40 px-3">
-      <div className="truncate text-xs text-muted-foreground">{documentLabel ?? "No file open"}</div>
+    <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b bg-card/40 px-3">
+      <div className="flex min-w-0 flex-1 items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={onToggleSidebar}
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              aria-label={sidebarVisible ? "Hide folders sidebar" : "Show folders sidebar"}
+            >
+              {sidebarVisible ? (
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              ) : (
+                <PanelLeftOpen className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{sidebarVisible ? "Hide folders" : "Show folders"}</TooltipContent>
+        </Tooltip>
+        <div className="truncate text-xs text-muted-foreground">{documentLabel ?? "No file open"}</div>
+      </div>
       <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
